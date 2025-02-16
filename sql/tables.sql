@@ -60,9 +60,7 @@ CREATE TABLE ClubMembers (
     Province VARCHAR(100),
     PostalCode VARCHAR(10),
     FamilyMemberID INT,
-    Status ENUM('Active', 'Inactive') NOT NULL, 
-    FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID),
-    CHECK (YEAR(DateOfBirth) BETWEEN YEAR(CURDATE()) - 18 AND YEAR(CURDATE()) - 11)
+    FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID)
 );
 
 CREATE TABLE Payments (
