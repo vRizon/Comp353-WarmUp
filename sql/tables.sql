@@ -24,12 +24,8 @@ CREATE TABLE Personnel (
     Province VARCHAR(100),
     PostalCode VARCHAR(10),
     EmailAddress VARCHAR(100),
-    Role ENUM('Administrator', 'Captain', 'Coach', 'Assistant Coach', 'Other') NOT NULL,
-    Mandate ENUM('Volunteer', 'Salaried') NOT NULL,
-    LocationID INT,
-    StartDate DATE,
-    EndDate DATE,
-    FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
+    Role ENUM('General Manager', 'Captain', 'Coach', 'Assistant Coach', 'Other') NOT NULL,
+    Mandate ENUM('Volunteer', 'Salaried') NOT NULL
 );
 
 CREATE TABLE FamilyMembers (
@@ -56,15 +52,17 @@ CREATE TABLE ClubMembers (
     DateOfBirth DATE NOT NULL,
     Height DECIMAL(5,2),
     Weight DECIMAL(5,2),
-    SocialSecurityNumber CHAR(11) UNIQUE,
-    MedicareCardNumber CHAR(12) UNIQUE,
+    SocialSecurityNumber CHAR(11) UNIQUE NOT NULL,
+    MedicareCardNumber CHAR(12) UNIQUE NOT NULL,
     PhoneNumber VARCHAR(15),
     Address VARCHAR(255),
     City VARCHAR(100),
     Province VARCHAR(100),
     PostalCode VARCHAR(10),
     FamilyMemberID INT,
-    FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID)
+    Status ENUM('Active', 'Inactive') NOT NULL, 
+    FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID),
+    CHECK (YEAR(DateOfBirth) BETWEEN YEAR(CURDATE()) - 18 AND YEAR(CURDATE()) - 11)
 );
 
 CREATE TABLE Payments (
@@ -73,7 +71,7 @@ CREATE TABLE Payments (
     PaymentDate DATE NOT NULL,
     Amount DECIMAL(10,2) NOT NULL,
     PaymentMethod ENUM('Cash', 'Debit Card', 'Credit Card') NOT NULL,
-    MembershipYear INT NOT NULL,
+    MembershipYear YEAR NOT NULL,
     FOREIGN KEY (ClubMemberID) REFERENCES ClubMembers(ClubMemberID)
 );
 
