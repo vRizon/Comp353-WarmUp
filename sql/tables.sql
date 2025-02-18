@@ -1,3 +1,4 @@
+
 CREATE TABLE Locations (
     LocationID INT AUTO_INCREMENT PRIMARY KEY,
     Type_T ENUM('Head', 'Branch') NOT NULL,
@@ -40,9 +41,7 @@ CREATE TABLE FamilyMembers (
     City VARCHAR(100),
     Province VARCHAR(100),
     PostalCode VARCHAR(10),
-    EmailAddress VARCHAR(100),
-    LocationID INT,
-    FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
+    EmailAddress VARCHAR(100)
 );
 
 CREATE TABLE ClubMembers (
@@ -59,7 +58,8 @@ CREATE TABLE ClubMembers (
     City VARCHAR(100),
     Province VARCHAR(100),
     PostalCode VARCHAR(10),
-    FamilyMemberID INT,
+    FamilyMemberID INT NOT NULL,
+    Status ENUM ('Active', 'Inactive') NOT NULL,
     FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID)
 );
 
@@ -74,11 +74,11 @@ CREATE TABLE Payments (
 );
 
 CREATE TABLE PersonnelLocations (
-    PersonnelLocationID INT AUTO_INCREMENT PRIMARY KEY,
     PersonnelID INT NOT NULL,
     LocationID INT NOT NULL,
     StartDate DATE NOT NULL,
     EndDate DATE,
+    PRIMARY KEY (PersonnelID, LocationID, StartDate),
     FOREIGN KEY (PersonnelID) REFERENCES Personnel(PersonnelID),
     FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
 );
@@ -93,17 +93,11 @@ CREATE TABLE FamilyMemberClubMember (
 );
 
 CREATE TABLE ClubMemberLocations (
-    ClubMemberLocationID INT AUTO_INCREMENT PRIMARY KEY,
     ClubMemberID INT NOT NULL,
     LocationID INT NOT NULL,
+    StartDate DATE NOT NULL,
+    EndDate DATE,
+    PRIMARY KEY (ClubMemberID, LocationID, StartDate),
     FOREIGN KEY (ClubMemberID) REFERENCES ClubMembers(ClubMemberID),
-    FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
-);
-
-CREATE TABLE FamilyMemberLocations (
-    FamilyMemberLocationID INT AUTO_INCREMENT PRIMARY KEY,
-    FamilyMemberID INT NOT NULL,
-    LocationID INT NOT NULL,
-    FOREIGN KEY (FamilyMemberID) REFERENCES FamilyMembers(FamilyMemberID),
     FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
 );

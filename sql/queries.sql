@@ -1,59 +1,55 @@
-
 -- i)
 
-SELECT 
-    L.Address,
-    L.City,
-    L.Province,
-    L.PostalCode,
-    L.PhoneNumbers,
-    L.WebAddress,
-    L.Type_T AS Type,
-    L.MaxCapacity AS Capacity,
-    (SELECT CONCAT(FirstName, ' ', LastName) 
-     FROM Personnel 
-     WHERE LocationID = L.LocationID AND Role = 'General Manager'
-     LIMIT 1
-    ) AS GeneralManagerName,
-    (SELECT COUNT(*) 
-     FROM Personnel 
-     WHERE LocationID = L.LocationID
-    ) AS NumberOfPersonnel,
-    (SELECT COUNT(*) 
-     FROM ClubMembers CM 
-     INNER JOIN ClubMemberLocations CL ON CM.ClubMemberID = CL.ClubMemberID 
-     WHERE CL.LocationID = L.LocationID
-    ) AS NumberOfClubMembers
-FROM 
-    Locations L
-ORDER BY 
-    L.Province ASC, 
-    L.City ASC;
-
+SELECT
+    l.Address,
+    l.City,
+    l.Province,
+    l.PostalCode,
+    l.PhoneNumbers,
+    l.WebAddress,
+    l.Type_T AS Type,
+    l.MaxCapacity AS Capacity,
+    (SELECT CONCAT(p.FirstName, ' ', p.LastName) 
+     FROM Personnel p 
+     JOIN PersonnelLocations pl ON p.PersonnelID = pl.PersonnelID
+     WHERE pl.LocationID = l.LocationID AND p.Role = 'General Manager' LIMIT 1) AS GeneralManagerName,
+    (SELECT COUNT(*)
+     FROM PersonnelLocations pl
+     WHERE pl.LocationID = l.LocationID) AS NumberOfPersonnel,
+    (SELECT COUNT(*)
+     FROM ClubMemberLocations cml
+     WHERE cml.LocationID = l.LocationID) AS NumberOfClubMembers
+FROM
+    Locations l
+ORDER BY
+    l.Province ASC, l.City ASC;
+    
 -- ii)
 
-SELECT 
-    FM.FirstName,
-    FM.LastName,
-    COUNT(CM.ClubMemberID) AS NumberOfActiveClubMembers
-FROM 
-    FamilyMembers FM
-LEFT JOIN 
-    ClubMembers CM ON FM.FamilyMemberID = CM.FamilyMemberID
-LEFT JOIN 
-    ClubMemberLocations CML ON CM.ClubMemberID = CML.ClubMemberID
-WHERE 
-    CML.LocationID = 1
-    AND CM.Status = 'Active'
-GROUP BY 
-    FM.FamilyMemberID, FM.FirstName, FM.LastName
-ORDER BY 
-    FM.LastName ASC, FM.FirstName ASC;
-
+SELECT
+    fm.FirstName,
+    fm.LastName,
+    COUNT(cm.ClubMemberID) AS NumberOfActiveClubMembers
+FROM
+    FamilyMembers fm
+JOIN
+    FamilyMemberClubMember fmc ON fm.FamilyMemberID = fmc.FamilyMemberID
+JOIN
+    ClubMembers cm ON fmc.ClubMemberID = cm.ClubMemberID
+JOIN
+    ClubMemberLocations cml ON cm.ClubMemberID = cml.ClubMemberID
+WHERE
+    cml.LocationID = 1 AND
+    cm.Status = 'Active' AND
+    (cml.EndDate IS NULL OR cml.EndDate >= CURDATE())
+GROUP BY
+    fm.FamilyMemberID
+ORDER BY
+    fm.FirstName, fm.LastName;
 
 -- iii)
 
-SELECT 
+SELECT
     p.FirstName,
     p.LastName,
     p.DateOfBirth,
@@ -67,42 +63,40 @@ SELECT
     p.EmailAddress,
     p.Role,
     p.Mandate
-FROM 
+FROM
     Personnel p
-JOIN 
-    PersonnelLocations pl ON p.PersonnelID = pl.PersonnelID;
+JOIN
+    PersonnelLocations pl ON p.PersonnelID = pl.PersonnelID
+WHERE
+    pl.LocationID = 1 AND
+    (pl.EndDate IS NULL OR pl.EndDate >= CURDATE())
+ORDER BY
+    p.LastName, p.FirstName;
+
 
 -- iv)
 
-SELECT 
-    (SELECT l.Name_N 
-     FROM Locations l
-     JOIN ClubMemberLocations cml ON l.LocationID = cml.LocationID
-     WHERE cml.ClubMemberID = cm.ClubMemberID
-     LIMIT 1) AS LocationName,
+SELECT
+    (SELECT l.Name_N FROM Locations l WHERE l.LocationID = cml.LocationID) AS LocationName,
     cm.ClubMemberID AS MembershipNumber,
     cm.FirstName,
     cm.LastName,
-    TIMESTAMPDIFF(YEAR, cm.DateOfBirth, CURDATE()) AS Age,
-    cm.City,
-    cm.Province,
-    (CASE 
-        WHEN EXISTS (
-            SELECT 1 
-            FROM ClubMemberLocations cml 
-            WHERE cml.ClubMemberID = cm.ClubMemberID
-        ) THEN 'Active'
-        ELSE 'Inactive'
-    END) AS Status
-FROM 
+    FLOOR(DATEDIFF(CURDATE(), cm.DateOfBirth) / 365.25) AS Age,
+    (SELECT l.City FROM Locations l WHERE l.LocationID = cml.LocationID) AS City,
+    (SELECT l.Province FROM Locations l WHERE l.LocationID = cml.LocationID) AS Province,
+    cm.Status
+FROM
     ClubMembers cm
-ORDER BY 
-    LocationName ASC,
-    Age ASC;
-
+JOIN
+    ClubMemberLocations cml ON cm.ClubMemberID = cml.ClubMemberID
+WHERE
+    (cml.EndDate IS NULL OR cml.EndDate >= CURDATE())
+ORDER BY
+    LocationName ASC, Age ASC;
+    
 -- v)
 
-SELECT 
+SELECT
     cm.ClubMemberID AS MembershipNumber,
     cm.FirstName,
     cm.LastName,
@@ -115,21 +109,18 @@ SELECT
     cm.Province,
     cm.PostalCode,
     fmc.Relationship,
-    (CASE 
-        WHEN EXISTS (
-            SELECT 1 
-            FROM ClubMemberLocations cml 
-            WHERE cml.ClubMemberID = cm.ClubMemberID
-        ) THEN 'Active'
-        ELSE 'Inactive'
-    END) AS Status
-FROM 
+    cm.Status
+FROM
     ClubMembers cm
-JOIN 
+LEFT JOIN
     FamilyMemberClubMember fmc ON cm.ClubMemberID = fmc.ClubMemberID
-ORDER BY 
+LEFT JOIN
+    FamilyMembers fm ON fmc.FamilyMemberID = fm.FamilyMemberID
+WHERE
+    fm.FamilyMemberID = 1
+ORDER BY
     cm.FirstName, cm.LastName;
-
+    
 -- vi)
 
 SELECT DISTINCT
@@ -139,56 +130,54 @@ SELECT DISTINCT
 FROM
     FamilyMembers fm
 JOIN
-    FamilyMemberClubMember fmc ON fm.FamilyMemberID = fmc.FamilyMemberID
+    FamilyMemberClubMember fmcm ON fm.FamilyMemberID = fmcm.FamilyMemberID
 JOIN
-    ClubMembers cm ON fmc.ClubMemberID = cm.ClubMemberID
+    ClubMembers cm ON fmcm.ClubMemberID = cm.ClubMemberID
 JOIN
     ClubMemberLocations cml ON cm.ClubMemberID = cml.ClubMemberID
-JOIN
-    Personnel p ON fm.FamilyMemberID = p.PersonnelID
-JOIN
-    PersonnelLocations pl ON p.PersonnelID = pl.PersonnelID
 WHERE
-    cml.LocationID = pl.LocationID
-    AND p.LocationID = cml.LocationID
-    AND cm.ClubMemberID IS NOT NULL
-    AND p.Role IN ('Administrator', 'Captain', 'Coach', 'Assistant Coach', 'Other')
-    AND p.Mandate IN ('Volunteer', 'Salaried');
+    cm.Status = 'Active' AND
+    cml.LocationID = 8 AND
+    EXISTS (
+        SELECT 1
+        FROM PersonnelLocations pl
+        WHERE
+            fm.FamilyMemberID = pl.PersonnelID AND
+            cml.LocationID = pl.LocationID
+    );
 
 -- vii)
 
-SELECT 
-    PaymentDate,
-    Amount,
-    YEAR(PaymentDate) AS YearOfPayment
-FROM 
-    Payments
-WHERE 
-    ClubMemberID = 2
-ORDER BY 
-    PaymentDate ASC;
-
+SELECT
+    p.PaymentDate,
+    p.Amount,
+    YEAR(p.PaymentDate) AS YearOfPayment
+FROM
+    Payments p
+WHERE
+    p.ClubMemberID in (5,6,7,8)
+ORDER BY
+    p.PaymentDate ASC;
+    
 -- viii)
 
 SELECT
-    SUM(
-        CASE
-            WHEN TotalPayments <= 100 THEN TotalPayments
-            ELSE 100
-        END
-    ) AS TotalMembershipFees,
-    SUM(
-        CASE
-            WHEN TotalPayments > 100 THEN TotalPayments - 100
-            ELSE 0
-        END
-    ) AS TotalDonations
+    SUM(p.MembershipFee) AS TotalMembershipFeesPaid,
+    SUM(p.Donation) AS TotalDonations
 FROM (
     SELECT
-        ClubMemberID,
-        SUM(Amount) AS TotalPayments
-    FROM Payments
-    WHERE MembershipYear = 2024
-    GROUP BY ClubMemberID
-) AS MemberPayments;
+        Amount,
+        CASE
+            WHEN Amount <= 100 THEN Amount
+            ELSE 100
+        END AS MembershipFee,
+        CASE
+            WHEN Amount > 100 THEN Amount - 100
+            ELSE 0
+        END AS Donation
+    FROM
+        Payments
+    WHERE
+        MembershipYear = 2024
+) p;
 
